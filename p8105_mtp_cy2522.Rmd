@@ -11,7 +11,29 @@ library(tidyverse)
 
 ```
 
+## import and clean the data
 ```{r}
+mtp_tidy = read.csv("./data/p8105_mtp_data.csv") %>%
+  janitor::clean_names() %>%
+  gather(key = activity_number, value = activity, activity_1:activity_1440 ) 
+```
 
+## exploratory analyses
+```{r}
+## the structure of the data
+str(mtp_tidy)
+
+### explore the number of "1"
+mtp_tidy %>%
+  filter(activity == 1.00000) %>%
+  group_by(week) %>% 
+  summarise(n = n())
+
+### outliers
+mtp_tidy %>%
+  mutate(week = factor(week)) %>%
+  ggplot(aes(x = week, y = activity)) +
+    geom_boxplot() +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
 
