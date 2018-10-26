@@ -8,7 +8,7 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-
+library(patchwork)
 ```
 
 ## import and clean the data
@@ -16,7 +16,8 @@ library(tidyverse)
 mtp_tidy = read.csv("./data/p8105_mtp_data.csv") %>%
   janitor::clean_names() %>%
   gather(key = activity_number, value = activity, activity_1:activity_1440 ) %>%
-  mutate(day = factor(day,levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")))
+  mutate(day = factor(day,levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
+         activity_number = as.numeric(str_replace(activity_number, "activity_", "")))
 ```
 
 ## exploratory analyses
@@ -45,10 +46,10 @@ mtp_tidy %>%
 ##aggregate the data
 mtp_total = mtp_tidy %>%
   group_by(week, day) %>%
-  summarise(total_activity = sum(activity))
+  summarise(total_activity = sum(activity)) %>%
+  mutate(day_num = row_number(day) + (week - 1) * 7) 
 
 mtp_total %>%
-  mutate(day_num = row_number(day) + (week - 1) * 7) %>%
   ggplot(aes( x = day_num, y = total_activity)) +
   geom_point() +
   geom_smooth(se = FALSE, color = "red") +
@@ -57,19 +58,55 @@ mtp_total %>%
     title = " plot of activity across the weeks ",
     x = "day",
     y = "activity of the day")
+
+act_day = lm(total_activity ~ day_num, data = mtp_total)
+  
+beta0 = coef(act_day)[1]
+beta1 = coef(act_day)[2]
 ```
+
+
 ### examine the possibility that day of the week affects activity
 ```{r}
 ## the effect of the day in a week
-mtp_total %>%
+panel_1 = mtp_total %>%
   ggplot(aes(x = factor(day), y = total_activity, fill = day)) +
   geom_boxplot() +
   labs( 
-    title = " effect of each day ",
+    title = " effect of each day (in isolation)",
     x = "day",
-    y = "activity ") 
+    y = "activity ") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+panel_2 = mtp_total %>%
+  group_by(week) %>%
+  mutate( activity_adjusted = (total_activity - beta0)/beta1) %>%
+  ggplot(aes(x = day, y = activity_adjusted )) +
+  geom_boxplot()  +
+  labs( 
+    title = " effect of each day (in addition to effect of time) ",
+    x = "day",
+    y = "activity") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+panel_1 + panel_2
 ```
   
-
+## problem 3
+```{r fig.height=6, fig.width= 10}
+## the distribution of activity
+mtp_tidy %>%
+  mutate( season = factor(week %/% 12 + 1)) %>%
+  ggplot(aes(x = activity_number, y = activity)) +
+  geom_line(alpha = .1, color = "blue") +
+  facet_grid(. ~ season) +
+  geom_smooth(se = FALSE,  aes(color = day)) +
+  ylim(0,3000) +
+  labs( 
+    title = " 24-hour activity “profiles” for each day ",
+    x = "minute of the day/(min)",
+    y = "activity ") 
 ```
+
 
