@@ -11,16 +11,26 @@ library(tidyverse)
 library(patchwork)
 ```
 
-## import and clean the data
+## overview
+
+- Accelerometers, as device for studying physical activity, can measure electrical signals that are a proxy for acceleration. Data of this project was collected on a 63 year-old male diagnosed with congestive heart failure. So we can get dynamic update of patient status from the data.
+
+## problem 1
+### data cleaning
 ```{r}
 mtp_tidy = read.csv("./data/p8105_mtp_data.csv") %>%
   janitor::clean_names() %>%
   gather(key = activity_number, value = activity, activity_1:activity_1440 ) %>%
-  mutate(day = factor(day,levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
-         activity_number = as.numeric(str_replace(activity_number, "activity_", "")))
+  mutate(day = 
+           factor(day,levels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")),
+         activity_number = 
+           as.numeric(str_replace(activity_number, "activity_", "")))
 ```
 
-## exploratory analyses
+- I cleaned the names, gathered and mutated the variables to make the data tidy. Finally there are **473760 observations of 4 variables** in it.
+
+
+### exploratory analyses
 ```{r}
 ## the structure of the data
 str(mtp_tidy)
@@ -39,6 +49,14 @@ mtp_tidy %>%
     geom_boxplot() +
     theme(axis.text.x = element_text(angle = 60, hjust = 1))
 ```
+
+- In my tidy dataset, numeric variables are `activity_number` and `activity`, integer is `week`, and factor variable is `day`.
+
+- Exploratory data includes a table about time of voltage signals larger than 1, a boxplot for outliers, and structure of data. 
+  From the table we can know the different activity time every week.  
+  We can see from the plot the outliers get higher gradually across the weeks.
+
+
 
 ## problem 2
 ###  explore the hypothesis that this participant became more active over time
@@ -61,15 +79,19 @@ mtp_total %>%
 
 act_day = lm(total_activity ~ day_num, data = mtp_total)
   
-beta0 = coef(act_day)[1]
-beta1 = coef(act_day)[2]
 ```
+
+- Firstly, I added variable of sum of voltages in a day, then got a **scatterplot** of activity across the weeks where x is day of week and y is total activity of a day. 
+
+- From the increasing mooth line in the plot we can know that the participant became more active over time. 
+
+- To make tendency clearer, I had a simple linear regression line and got **intercept 251539 and slope 573**.
 
 
 ### examine the possibility that day of the week affects activity
 ```{r}
 ## the effect of the day in a week
-panel_1 = mtp_total %>%
+mtp_total %>%
   ggplot(aes(x = factor(day), y = total_activity, fill = day)) +
   geom_boxplot() +
   labs( 
@@ -78,22 +100,35 @@ panel_1 = mtp_total %>%
     y = "activity ") +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
+lm(total_activity ~ day, data = mtp_total) %>%
+  anova()
 
-panel_2 = mtp_total %>%
-  group_by(week) %>%
-  mutate( activity_adjusted = (total_activity - beta0)/beta1) %>%
-  ggplot(aes(x = day, y = activity_adjusted )) +
-  geom_boxplot()  +
+
+mtp_total %>%
+  ggplot(aes(x = week, y = total_activity)) +
+  geom_point(alpha = .5) +
+  geom_smooth() +
+  facet_grid(.~ day)  +
   labs( 
     title = " effect of each day (in addition to effect of time) ",
-    x = "day",
+    x = "week",
     y = "activity") +
   theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
-panel_1 + panel_2
+lm(total_activity ~ factor(week), data = mtp_total) %>%
+  anova()
 ```
+
+
+- The first **boxplot** has day as x and activity as y. 
+From the plot we can know: there is an increasing tendency of effect from Tuesday to Friday, and a decreasing tendency from Friday to Tuesday. 
+The participant is most active on Fridays and least active on Tuesdays. But from anova, I think there is no difference between days at 0.05 sig.level.
+  
+- The second **scatterplot** has week as x and activity as y. We can see Sunday and Friday have more increasing effects on activity than other days. 
+Anova shows there are differences at 0.05 sig.level meaning week  has effect.
   
 ## problem 3
+### 24-hour activity profiles
 ```{r fig.height=6, fig.width= 10}
 ## the distribution of activity
 mtp_tidy %>%
@@ -104,9 +139,18 @@ mtp_tidy %>%
   geom_smooth(se = FALSE,  aes(color = day)) +
   ylim(0,3000) +
   labs( 
-    title = " 24-hour activity “profiles” for each day ",
+    title = " 24-hour activity profiles for each day ",
     x = "minute of the day/(min)",
     y = "activity ") 
+
+wordcountaddin::text_stats("p8105_mtp_cy2522.Rmd")
 ```
 
+ - Eventually, I made a line plot which is divided into 4 panels by season (12 weeks as one season) which shows both the 24-hour activity profiles for each day and effects of time and day of the week on 24-hour activity . I set the y-limit (0,3000) to make the plot clearer.
+ 
+- From the 24-hour smooth line, we can see the participant becomes more active from approximately 500th to 1250th minute and gradually becomes peaceful. 
+So we can see maybe his sleeping hours is from 11 p.m. to 7 a.m. and then begins new day’s activity. 
+
+- From panels, we can see that the participant tended to get up later on weekends than other working days, and he was more active at Friday nights around 8 p.m. 
+Overall, in the first season, he was least active at weekends, and gradually became more active at weekends, maybe because he was recovering during the 47 weeks.
 
