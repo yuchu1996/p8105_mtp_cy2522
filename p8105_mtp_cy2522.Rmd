@@ -15,7 +15,7 @@ library(patchwork)
 
 - Accelerometers, as device for studying physical activity, can measure electrical signals that are a proxy for acceleration. Data of this project was collected on a 63 year-old male diagnosed with congestive heart failure. So we can get dynamic update of patient status from the data.
 
-## problem 1
+## Processing
 ### data cleaning
 ```{r}
 mtp_tidy = read.csv("./data/p8105_mtp_data.csv") %>%
@@ -58,7 +58,7 @@ mtp_tidy %>%
 
 
 
-## problem 2
+## Exploratory part 
 ###  explore the hypothesis that this participant became more active over time
 ```{r fig.height = 6, fig.width = 9}
 ##aggregate the data
@@ -127,7 +127,7 @@ The participant is most active on Fridays and least active on Tuesdays. But from
 - The second **scatterplot** has week as x and activity as y. We can see Sunday and Friday have more increasing effects on activity than other days. 
 Anova shows there are differences at 0.05 sig.level meaning week  has effect.
   
-## problem 3
+## Analysis
 ### 24-hour activity profiles
 ```{r fig.height=6, fig.width= 10}
 ## the distribution of activity
